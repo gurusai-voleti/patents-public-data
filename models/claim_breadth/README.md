@@ -29,7 +29,7 @@ files
 ```
 export GCP_PROJECT=`gcloud config get-value project`
 export BUCKET=gs://[YOUR BUCKET NAME]
-gsutil mb $BUCKET
+gcloud storage buckets create $BUCKET
 ```
 
 #### Enable relevant API's in the GCP console.
@@ -103,7 +103,7 @@ bq --project=$GCP_PROJECT query --max_rows=100000 --format=csv "$(cat generate_e
 sed -i '2 d' cpc_embedding_vocab.txt
 sed -i '/^\s*$/d' cpc_embedding_vocab.txt
 # Copy to GCS for use in training and remove local copy.
-gsutil cp ./cpc_embedding_vocab.txt $BUCKET
+gcloud storage cp ./cpc_embedding_vocab.txt $BUCKET
 rm ./cpc_embedding_vocab.txt
 ```
 
@@ -200,7 +200,8 @@ trained model files from GCP and set up a model version on cloud ML:
 ```
 export MODEL_NAME=patent_claims
 export VERSION='v1'
-export SAVED_MODEL=`gsutil ls -d "$GCS_JOB_DIR/export/model/[0-9]*/"`
+# The -d flag for gsutil ls is not supported in gcloud storage.
+export SAVED_MODEL=`gcloud storage ls "$GCS_JOB_DIR/export/model/[0-9]*/"`
 gcloud ml-engine models create $MODEL_NAME
 gcloud ml-engine versions create $VERSION --model $MODEL_NAME --origin $SAVED_MODEL --runtime-version=1.4
 export MODEL_VERSION_STR="$MODEL_NAME/versions/$VERSION"

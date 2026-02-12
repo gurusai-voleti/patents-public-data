@@ -43,7 +43,7 @@ import csv
 parser = argparse.ArgumentParser(description="Upload a CSV file to a BigQuery table")
 parser.add_argument("--dry_run", default=False, action="store_true", help="Do not upload.")
 parser.add_argument("--bq_bin", default="bq", help="Path to the BigQuery CLI")
-parser.add_argument("--gsutil_bin", default="gsutil", help="Path to the GSUtil CLI")
+parser.add_argument("--gcloud_bin", default="gcloud", help="Path to the gcloud CLI")
 parser.add_argument("--project_id", default="", help="Google Cloud Project ID to store temporary Google Cloud Storage files in. If empty, uses the project from the table name.")
 parser.add_argument("--storage_bucket", default="", help="Google Cloud Storage bucket name. This bucket must be in the same region as --location. If empty, creates a new bucket under this project_id.")
 parser.add_argument("--overwrite", default=False, action="store_true", help="Overwrite the table if it exists.")
@@ -94,7 +94,7 @@ if args.header and len(table_files) > 1:
 
 # Upload to bucket.
 # Clear bucket space
-gsutil = sh.Command(args.gsutil_bin)
+gcloud = sh.Command(args.gcloud_bin)
 
 project_id = args.project_id
 if not project_id:
@@ -112,7 +112,7 @@ if not bucket:
 bucket = "gs://" + bucket
 
 try:
-  gsutil("ls", bucket)
+  gcloud("storage", "ls", bucket)
   print("Bucket %s exists" % bucket)
 except:
   if args.location == "EU":
@@ -120,10 +120,10 @@ except:
   else:
     bucket_location = "us-east1"
 
-  mb_args = ["mb", "-c", "regional", "-l", bucket_location, "-p", project_id, bucket]
-  print("gsutil %s" % mb_args)
+  mb_args = ["storage", "buckets", "create", bucket, "--default-storage-class", "regional", "--location", bucket_location, "--project", project_id]
+  print("gcloud %s" % " ".join(mb_args))
   if not args.dry_run:
-    gsutil(*mb_args)
+    gcloud(*mb_args)
     print("Created new bucket")
 
 # Split to 4G, gzip and upload CSV files. Skip the header lines.
@@ -159,7 +159,7 @@ class Splitter:
       self.upload_paths.append(path_split)
       self.parts += 1
       print("Uploading %s" % path_split)
-      self.upload_proc = gsutil(gzip_pipe, "cp", "-", path_split, _in_bufsize=buf, _bg=True, _internal_bufsize=16 * 2 ** 20)
+      self.upload_proc = gcloud(gzip_pipe, "storage", "cp", "-", path_split, _in_bufsize=buf, _bg=True, _internal_bufsize=16 * 2 ** 20)
       print("Upload proc: %s" % self.upload_proc.pid)
 
     self.size += chunk_size
@@ -277,5 +277,5 @@ for table in sorted(table_files.keys()):
   if not args.dry_run:
     bq(*bq_args)
     print("Removing uploaded files %s" % uploaded_paths)
-    gsutil("rm", *uploaded_paths)
+    gcloud("storage", "rm", *uploaded_paths)
     print("Done creating %s" % table)
