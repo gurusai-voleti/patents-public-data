@@ -200,7 +200,6 @@ trained model files from GCP and set up a model version on cloud ML:
 ```
 export MODEL_NAME=patent_claims
 export VERSION='v1'
-# The -d flag for gsutil ls is not supported in gcloud storage.
 export SAVED_MODEL=`gcloud storage ls "$GCS_JOB_DIR/export/model/[0-9]*/"`
 gcloud ml-engine models create $MODEL_NAME
 gcloud ml-engine versions create $VERSION --model $MODEL_NAME --origin $SAVED_MODEL --runtime-version=1.4
